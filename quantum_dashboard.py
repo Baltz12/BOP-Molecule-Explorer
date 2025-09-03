@@ -1,4 +1,8 @@
+# quantum_dashboard_smiles_combobox.py
+
 import streamlit as st
+from rdkit import Chem
+from rdkit.Chem import Draw
 import pennylane as qml
 from pennylane import numpy as np
 import matplotlib.pyplot as plt
@@ -52,25 +56,38 @@ with col2:
     else:
         smiles_2 = None
 
-# --- Molecule Previews (Disabled) ---
+# --- Molecule Previews ---
 st.subheader("🧪 Individual Molecule Previews")
-st.warning("RDKit is not supported on Streamlit Cloud. Molecule previews are disabled.")
 
-if smiles_1:
-    label_1 = selected_1 if selected_1 != "Custom" else "Manual SMILES"
-    st.markdown(f"**Compound 1:** {label_1}")
-    st.text(f"SMILES: {smiles_1}")
-if smiles_2:
-    label_2 = selected_2 if selected_2 != "Custom" else "Manual SMILES"
-    st.markdown(f"**Compound 2:** {label_2}")
-    st.text(f"SMILES: {smiles_2}")
+mol1 = Chem.MolFromSmiles(smiles_1) if smiles_1 else None
+mol2 = Chem.MolFromSmiles(smiles_2) if smiles_2 else None
 
-# --- Combined SMILES ---
+col1, col2 = st.columns(2)
+with col1:
+    if mol1:
+        label_1 = selected_1 if selected_1 != "Custom" else "Manual SMILES"
+        st.image(Draw.MolToImage(mol1, size=(300, 300)))
+        st.markdown(f"**Compound 1:** {label_1}")
+        st.text(f"SMILES: {smiles_1}")
+with col2:
+    if mol2:
+        label_2 = selected_2 if selected_2 != "Custom" else "Manual SMILES"
+        st.image(Draw.MolToImage(mol2, size=(300, 300)))
+        st.markdown(f"**Compound 2:** {label_2}")
+        st.text(f"SMILES: {smiles_2}")
+
+# --- Combined Molecule Preview ---
 st.subheader("🔗 Combined Molecule Preview")
+
 if smiles_1 and smiles_2:
     combined_smiles = f"{smiles_1}.{smiles_2}"
-    st.text(f"Combined SMILES: {combined_smiles}")
-    st.caption("Note: Combined molecule rendering is disabled on Streamlit Cloud.")
+    combined_mol = Chem.MolFromSmiles(combined_smiles)
+    if combined_mol:
+        st.image(Draw.MolToImage(combined_mol, size=(400, 400)))
+        st.caption("Combined Molecule (non-bonded)")
+        st.text(f"Combined SMILES: {combined_smiles}")
+    else:
+        st.warning("⚠️ Could not render combined molecule.")
 else:
     st.info("Enter both SMILES to generate combined preview.")
 
@@ -115,11 +132,11 @@ def plot_energy_curve(energy_track, label):
 
 with st.expander("Run Quantum Circuit"):
     if smiles_1:
-        atom_count_1 = len(smiles_1)  # crude proxy for atom count
+        atom_count_1 = mol1.GetNumAtoms()
         energy_track_1 = run_vqe(atom_count_1)
         plot_energy_curve(energy_track_1, selected_1 if selected_1 != "Custom" else "Compound 1")
     if smiles_2:
-        atom_count_2 = len(smiles_2)
+        atom_count_2 = mol2.GetNumAtoms()
         energy_track_2 = run_vqe(atom_count_2)
         plot_energy_curve(energy_track_2, selected_2 if selected_2 != "Custom" else "Compound 2")
 
